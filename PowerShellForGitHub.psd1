@@ -120,6 +120,7 @@
         'Get-GitHubRepositoryUniqueContributor',
         'Get-GitHubTeam',
         'Get-GitHubTeamMember',
+        'Get-GitHubTeamRepository',
         'Get-GitHubUser',
         'Get-GitHubUserContextualInformation',
         'Get-GitHubViewTraffic',

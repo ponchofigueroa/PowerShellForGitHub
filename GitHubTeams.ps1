@@ -319,6 +319,98 @@ filter Get-GitHubTeamMember
     return (Invoke-GHRestMethodMultipleResult @params | Add-GitHubUserAdditionalProperties)
 }
 
+filter Get-GitHubTeamRepository
+{
+<#
+    .SYNOPSIS
+        Retrieve list of repositories visible to a team within an organization.
+
+        .DESCRIPTION
+        Retrieve list of repositories visible to a team within an organization.
+
+        The Git repo for this module can be found here: http://aka.ms/PowerShellForGitHub
+
+    .PARAMETER OrganizationName
+        The name of the organization.
+
+    .PARAMETER TeamName
+        The name of the team in the organization.
+
+    .PARAMETER TeamSlug
+        The slug (a unique key based on the team name) of the team in the organization.
+
+    .PARAMETER AccessToken
+        If provided, this will be used as the AccessToken for authentication with the
+        REST Api.  Otherwise, will attempt to use the configured value or will run unauthenticated.
+
+    .INPUTS
+        GitHub.Team
+
+    .OUTPUTS
+        GitHub.Repository
+
+    .EXAMPLE
+        $members = Get-GitHubTeamRepository -Organization PowerShell -TeamName Everybody
+#>
+    [CmdletBinding(DefaultParameterSetName = 'Slug')]
+    [OutputType({$script:GitHubRepositoryTypeName})]
+    param
+    (
+        [Parameter(
+            Mandatory,
+            ValueFromPipelineByPropertyName)]
+        [ValidateNotNullOrEmpty()]
+        [String] $OrganizationName,
+
+        [Parameter(
+            Mandatory,
+            ValueFromPipelineByPropertyName,
+            ParameterSetName='Name')]
+        [ValidateNotNullOrEmpty()]
+        [String] $TeamName,
+
+        [Parameter(
+            Mandatory,
+            ValueFromPipelineByPropertyName,
+            ParameterSetName='Slug')]
+        [string] $TeamSlug,
+
+        [string] $AccessToken
+    )
+
+    Write-InvocationLog
+
+    if ($PSCmdlet.ParameterSetName -eq 'Name')
+    {
+        $teams = Get-GitHubTeam -OrganizationName $OrganizationName -AccessToken $AccessToken
+        $team = $teams | Where-Object {$_.name -eq $TeamName}
+        if ($null -eq $team)
+        {
+            $message = "Unable to find the team [$TeamName] within the organization [$OrganizationName]."
+            Write-Log -Message $message -Level Error
+            throw $message
+        }
+
+        $TeamSlug = $team.slug
+    }
+
+    $telemetryProperties = @{
+        'OrganizationName' = (Get-PiiSafeString -PlainText $OrganizationName)
+        'TeamName' = (Get-PiiSafeString -PlainText $TeamName)
+        'TeamSlug' = (Get-PiiSafeString -PlainText $TeamSlug)
+    }
+
+    $params = @{
+        'UriFragment' = "orgs/$OrganizationName/teams/$TeamSlug/repos"
+        'Description' = "Getting repos of team $TeamSlug"
+        'AccessToken' = $AccessToken
+        'TelemetryEventName' = $MyInvocation.MyCommand.Name
+        'TelemetryProperties' = $telemetryProperties
+    }
+
+    return (Invoke-GHRestMethodMultipleResult @params | Add-GitHubUserAdditionalProperties)
+}
+
 function New-GitHubTeam
 {
 <#
